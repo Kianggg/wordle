@@ -6,179 +6,314 @@
     <link href="styles.css" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Gaegu">
     <!-- Site Title -->
-    <title>Battleship</title>
+    <title>Wordle</title>
   </head>
 
   <body>
-    <span id="announcements">
+    <span id="debug">
     </span>
     <div id="gameboard" class="grid-container">
+    </div>
+    <div id="guesses">
     </div>
   </body>
 
   <script>
-    /* Set locations of ships */
-    const shipMap = { "ships": [
+    /* URL stem for the  API I'm using: Free Dictionary API */
+    /* The full path is: "https://api.dictionaryapi.dev/api/v2/entries/en/YourWordGoesHere" */
+    const dictionary = "https://api.dictionaryapi.dev/api/v2/entries/en/";
 
-      { "name": "Destroyer", "orientation": "vertical", "size": 2, "coords": [1, 1] }, 
+    /* List of possible answer words that Wordle can use */
+    /* IIRC this is how it was originally set up, with a list of 2,000 words curated by Josh Wardle */
+    const possibleSolutions = [
+        "abate",
+        "abuzz",
+        "affix",
+        "agaze",
+        "agate",
+        "amaze",
+        "annex",
+        "apple",
+        "axiom",
+        "bangs",
+        "barge",
+        "basic",
+        "beast",
+        "beard",
+        "beefy",
+        "being",
+        "bosom",
+        "block",
+        "bumpy",
+        "cabal",
+        "cacao",
+        "cache",
+        "cadet",
+        "camel",
+        "campy",
+        "candy",
+        "caper",
+        "cases",
+        "cause",
+        "ceded",
+        "chair",
+        "chart",
+        "choke",
+        "chump",
+        "chunk",
+        "clamp",
+        "clank",
+        "clasp",
+        "clean",
+        "clear",
+        "clove",
+        "clump",
+        "coded",
+    ];
 
-      { "name": "Submarine", "orientation": "horizontal", "size": 3, "coords": [2, 3] },
-
-      { "name": "Cruiser", "orientation": "horizontal", "size": 3, "coords": [3, 0] },
-
-      { "name": "Battleship", "orientation": "vertical", "size": 4, "coords": [0, 1] }
-
-      ]
-
-    }
-
-    /* Set number of turns */
-    const turnLimit = 20;
-
-    /* Keep track of which ships have been sunk */
-    /* This will be modified later by placeShips() and the click-handling function */
-    var shipsToSink = [];
+    /* Hide debug */
+    $("#debug").hide();
 
     /* Populate game board */
     let numRows = 6;
-    let numColumns = 6;
+    let numColumns = 5;
     for (let i = 0; i < numRows; i++)
     {
       $("#gameboard").append('<row class="grid-item"></row>');
     }
     for (let n = 0; n < numColumns; n++)
     {
-      $("row").append('<div class="grid-item"><button></button></div>');
+      $("row").append('<div id="letter_tile" class="blank"></div>');
     }
 
-    /* Create the map from which we will be populating the board with ships */
-    var map = shipMap;
-    
-    /* Dynamically set cell IDs */
-    $("button").each(function(index) {
+    /* Set row IDs */
+    $("row").each(function(index) {
       $(this).attr("id", index);
-      $(this).attr("class", "blank");
     });
 
-    /* Place the ships */
-    placeShips();
+    /* Create array of guessed letters */
+    var alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+    $("#guesses").append('<row id="guessed_letters" class="grid-item"></row>');
+    for (let i = 0; i < alphabet.length; i++) {
+      $("#guessed_letters").append('<div id="guessed_letter_tile" class="' + alphabet[i] + '">' + alphabet[i] + '</div>');
+    } 
 
-    /* Setting up first turn */
+    /* Set a word to guess */
+    var solution = possibleSolutions[Math.floor(Math.random() * possibleSolutions.length)];
+
+    /* Create array of guessed letters */
+    var guessedLetters = [];
+
+    /* Print solution to console for debugging */
+    console.log("The word to guess is: " + solution);
+
+    /* Setting up the first turn */
     let turn = 0;
     let gameActive = true;
-    $("#announcements").text("Can you find the ships?");
+    let gameOver = false;
 
-    /* Handling a Click */
-    $(document).ready(function() {
-      $("button").click(function() {
+    /* Handling key presses */
+    $(document).keydown(function(e) {
+        /* Toggle debug mode with Shift */
+        if (e.which == 16) {
+          console.log(e.which);
+          $("#debug").toggle();
+        }
+
+        /* Update debug mode message */
+        updateDebug();
 
         /* Only work if game is active */
         if (!gameActive) {
+          return;
+        }
+
+        /* Reset the game if necessary */
+        if (gameOver) {
           resetGame();
           return;
         }
 
-        let id = $(this).attr('id');
-        let buttonStatus = $(this).attr('class');
+        var keycode = e.which;
 
-        /* Change image of clicked button and text of announcements */
-        if (buttonStatus == "blank") {
-          /* Check to see if there is any ship there */
-          if ($(this).children().length > 0 ) {
-            $(this).attr("class", "hit");
-            $("#announcements").text("Hit!");
-            $(this).children().remove();
+        // Check for alphabetical
+        if (keycode >= '65' && keycode <= '90') {
+
+          // Iterate over the letters in the row to see where we're at
+          var letters = $("#" + turn).children();
+          for (let i = 0; i < letters.length; i++) {
+              if (letters[i].innerHTML == '')
+              {
+                letters[i].innerHTML = e.key.toLowerCase();
+                pulseLetter(i);
+                return;
+              }
           }
+        }
+        // Check for delete
+        else if ((keycode == 8) || (keycode == 46)) {
+          var letters = $("#" + turn).children();
+          for (let i = letters.length - 1; i >= 0; i--) {
+            if (letters[i].innerHTML != '')
+            {
+              letters[i].innerHTML = '';
+              return;
+            }
+          }
+        }
+        // Check for enter
+        else if (keycode == 13) {
+          // Decativate inputs until program is fninshed checking the guess
+          gameActive = false;
+
+          // Construct guess
+          let guess = [];
+          var letters = $("#" + turn).children();
+          for (let i = 0; i < letters.length; i++) {
+              if (letters[i].innerHTML != '')
+              {
+                guess.push(letters[i].innerHTML);
+              }
+          }
+
+          // Validate guess and send error messages
+          if (guess.length != 5) {
+            shakeRow();
+            create_alert("Not enough letters!");
+            gameActive = true;
+            return;
+          }
+          // Check to see if it is a legal word
+          else if (!legalWord(guess.join(''))) {
+            shakeRow();
+            create_alert("Not in word list!");
+            gameActive = true;
+            return;
+          }
+          // Light up the letters to give hints
           else {
-            $(this).attr("class", "miss");
-            $("#announcements").text("Miss!");
+            var letters = $("#" + turn).children();
+            var points = 0;
+
+            for (let i = 0; i < letters.length; i++) {
+              if (guess[i] == solution[i])
+              {
+                letters[i].setAttribute("class", "hot");
+                $("." + guess[i] + "").attr("class", "hot");
+                points++;
+              }
+              else if (solution.indexOf(guess[i]) >= 0) {
+                letters[i].setAttribute("class", "warm");
+                $("." + guess[i] + "").attr("class", "warm");
+              }
+              else {
+                letters[i].setAttribute("class", "cold");
+                $("." + guess[i] + "").attr("class", "cold");
+              }
+            }
+
+            turn += 1;
+            updateDebug();
           }
-        }
-        else {
-          /* If non-empty cell clicked, end the function without continuing and incrementing the turn count */
-          return;
-        }
 
-        /* Check to see if any ships were sunk */
-        for (let i = shipsToSink.length - 1; i > -1; i--) {
-          if ($("#" + shipsToSink[i]).length == 0) {
-            $("#announcements").text(shipsToSink[i] + " has been sunk!");
-            shipsToSink.splice(i, 1);
+          // Check for game end
+          if (points == 5) {
+            endGame(0);
           }
-        }
+          else if (turn >= 6) {
+            endGame(1);
+          }
 
-        /* Increment the turn */
-        turn++;
-        $("#announcements").append("<p>Shots taken: " + turn + " of " + turnLimit + "</p>");
-
-        /* Check to see if game has ended */
-        if (shipsToSink.length == 0) {
-          endGame(0);
-          return;
+          gameActive = true;
+          updateDebug();
         }
-        else if (turn >= turnLimit) {
-          endGame(1);
-          return;
-        }
-      });
+        else { return; }
     });
+
+    // Checks to see if the given word is in the acceptable word list
+    // Returns true or false
+    function legalWord(guess) {
+      var myRequest = new XMLHttpRequest();
+      var myFile = dictionary + guess;
+      var legal = false;
+      myRequest.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            legal = true;
+          }
+      };
+      myRequest.open("GET", myFile, false);
+      myRequest.send();
+      return legal;
+    }
+
+    // Graphical feedback when player guesses a non-word
+    function shakeRow() {
+      $("#" + turn).addClass('shaking');
+      setTimeout(function() {
+        $("#" + turn).removeClass('shaking');
+      }, 1000);
+    }
+
+    // Graphical feedback when player inputs a letter
+    function pulseLetter(index) {
+      let letter = $("#" + turn).children().eq(index);
+      letter.addClass('pulsing');
+      setTimeout(function() {
+        letter.removeClass('pulsing');
+      }, 250);
+    }
+
+    // It updates the debug log
+    function updateDebug() {
+      $("#debug").html("Word: " + solution + "<br> Turn: " + turn + "<br> gameActive: " + gameActive + "<br> gameOver: " + gameOver);
+    }
 
     /* Ending the game */
     /* 0 is win, 1 is lose */ 
     function endGame(result) {
-      gameActive = false;
       if (result == 0) {
-        $("#announcements").text("Congratulations! You win!");
+        alert("You win! Type any letter to play again!");
       }
       else {
-        $("#announcements").text("Better luck next time...!");
+        alert("The word was: " + solution + " -- Type any letter to play again!")
       }
-      $("#announcements").append("<p>Click any square to play again!</p>");
+      gameActive = true;
+      gameOver = true;
+      updateDebug();
     };
 
     /* Reset the game */
     function resetGame()
     {
       /* Clear all tiles */
-      $("button").attr("class", "blank");
+      $("div #letter_tile").each(function() {
+        $(this).html("");
+        $(this).attr("class", "blank");
+      });
 
-      /* Reset text */
-      $("#announcements").text("Find the ships again!");
+      /* Reset guessed letters */
+      $("#guessed_letters").remove();
+      $("#guesses").append('<row id="guessed_letters" class="grid-item"></row>');
+      for (let i = 0; i < alphabet.length; i++) {
+        $("#guessed_letters").append('<div id="guessed_letter_tile" class="' + alphabet[i] + '">' + alphabet[i] + '</div>');
+      } 
 
-      /* Replace ships */
-      placeShips();
+      /* Select new word to guess */
+      solution = possibleSolutions[Math.floor(Math.random() * possibleSolutions.length)];
+      console.log("New word to guess is: " + solution)
 
       /* Reset variables */
       turn = 0;
-      gameActive = true;
+      gameOver = false;
+      updateDebug();
     }
 
-    function placeShips() {
-      /* Place Ships */
-      for (let i = 0; i < map.ships.length; i++) {
-        /* Calculate IDs to hit */
-        let startingColumn = map.ships[i].coords[0];
-        let startingRow = map.ships[i].coords[1];
-        let startingCellID = (startingRow * numColumns) + startingColumn;
-
-        if (map.ships[i].orientation == "horizontal"){
-        /* For horizontal ships */
-          for (let n = 0; n < map.ships[i].size; n++) {
-            let cell = startingCellID + n;
-            $("#" + cell).append("<div id = " + map.ships[i].name + "></div>");
-          }
-        }
-        else {
-          /* For vertical ships */
-          for (let n = 0; n < map.ships[i].size; n++) {
-            let cell = startingCellID + (n * numColumns);
-            $("#" + cell).append("<div id = " + map.ships[i].name + "></div>");
-          }
-        }
-        
-        /* Keep track of which ships have been sunk */
-        shipsToSink.push(map.ships[i].name);
-      }
+    /* Creates an alert that isn't the normal default one */
+    function create_alert(message) {
+      let alert = document.createElement('div');
+      alert.setAttribute("id", "announcement");
+      alert.innerHTML = message;
+      $("#gameboard").prepend(alert);
     }
   </script>
 </html>
