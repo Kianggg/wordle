@@ -1,0 +1,78 @@
+:root {
+    --background: #09192e;
+    --font-color: #f0f8ff;
+    --gridlines: #7c7676;
+
+    --blank: #95d0df;
+    --hit: #a5df8f;
+    --miss: #e76a54;
+
+    --cell-size: 64px;
+}
+
+body {
+    text-align:center;
+    vertical-align:middle;
+    font-size: xx-large;
+    font-family: 'Gaegu', sans-serif;
+    background-color: var(--background);
+    
+    color: var(--font-color);
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-auto-rows: 60px;
+    grid-gap: 20px;
+
+    /* border: 1px solid var(--gridlines); */
+    padding: 20px;
+}
+
+.grid-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+ul {
+    list-style: none;
+    padding: 0px;
+    display: grid;
+}
+
+row {
+    display:inline-flex;
+}
+
+button {
+    height: var(--cell-size);
+    width: var(--cell-size);
+    text-decoration: none;
+    /* background-size: 100% 100%; */
+    /* background-image: url("/images/TileBlank_256.png"); */
+    background-color: var(--blank);
+    transition: 0.3s;
+    border: 4px solid var(--background); 
+}
+
+button:hover {
+    border: 4px solid var(--gridlines);
+    opacity: 90%;
+}
+
+.blank {
+    /* background-image: url("images/TileBlank_256.png"); */
+    background-color: var(--blank);
+}
+
+.hit {
+    /* background-image: url("images/TileX_256.png"); */
+    background-color: var(--hit);
+}
+
+.miss {
+    /* background-image: url("images/TileO_256.png"); */
+    background-color: var(--miss);
+}

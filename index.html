@@ -1,1 +1,184 @@
+<html>
+  <script src="https://code.jquery.com/jquery-3.6.3.js"></script>
 
+  <head>
+    <!-- CSS and Font -->
+    <link href="styles.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Gaegu">
+    <!-- Site Title -->
+    <title>Battleship</title>
+  </head>
+
+  <body>
+    <span id="announcements">
+    </span>
+    <div id="gameboard" class="grid-container">
+    </div>
+  </body>
+
+  <script>
+    /* Set locations of ships */
+    const shipMap = { "ships": [
+
+      { "name": "Destroyer", "orientation": "vertical", "size": 2, "coords": [1, 1] }, 
+
+      { "name": "Submarine", "orientation": "horizontal", "size": 3, "coords": [2, 3] },
+
+      { "name": "Cruiser", "orientation": "horizontal", "size": 3, "coords": [3, 0] },
+
+      { "name": "Battleship", "orientation": "vertical", "size": 4, "coords": [0, 1] }
+
+      ]
+
+    }
+
+    /* Set number of turns */
+    const turnLimit = 20;
+
+    /* Keep track of which ships have been sunk */
+    /* This will be modified later by placeShips() and the click-handling function */
+    var shipsToSink = [];
+
+    /* Populate game board */
+    let numRows = 6;
+    let numColumns = 6;
+    for (let i = 0; i < numRows; i++)
+    {
+      $("#gameboard").append('<row class="grid-item"></row>');
+    }
+    for (let n = 0; n < numColumns; n++)
+    {
+      $("row").append('<div class="grid-item"><button></button></div>');
+    }
+
+    /* Create the map from which we will be populating the board with ships */
+    var map = shipMap;
+    
+    /* Dynamically set cell IDs */
+    $("button").each(function(index) {
+      $(this).attr("id", index);
+      $(this).attr("class", "blank");
+    });
+
+    /* Place the ships */
+    placeShips();
+
+    /* Setting up first turn */
+    let turn = 0;
+    let gameActive = true;
+    $("#announcements").text("Can you find the ships?");
+
+    /* Handling a Click */
+    $(document).ready(function() {
+      $("button").click(function() {
+
+        /* Only work if game is active */
+        if (!gameActive) {
+          resetGame();
+          return;
+        }
+
+        let id = $(this).attr('id');
+        let buttonStatus = $(this).attr('class');
+
+        /* Change image of clicked button and text of announcements */
+        if (buttonStatus == "blank") {
+          /* Check to see if there is any ship there */
+          if ($(this).children().length > 0 ) {
+            $(this).attr("class", "hit");
+            $("#announcements").text("Hit!");
+            $(this).children().remove();
+          }
+          else {
+            $(this).attr("class", "miss");
+            $("#announcements").text("Miss!");
+          }
+        }
+        else {
+          /* If non-empty cell clicked, end the function without continuing and incrementing the turn count */
+          return;
+        }
+
+        /* Check to see if any ships were sunk */
+        for (let i = shipsToSink.length - 1; i > -1; i--) {
+          if ($("#" + shipsToSink[i]).length == 0) {
+            $("#announcements").text(shipsToSink[i] + " has been sunk!");
+            shipsToSink.splice(i, 1);
+          }
+        }
+
+        /* Increment the turn */
+        turn++;
+        $("#announcements").append("<p>Shots taken: " + turn + " of " + turnLimit + "</p>");
+
+        /* Check to see if game has ended */
+        if (shipsToSink.length == 0) {
+          endGame(0);
+          return;
+        }
+        else if (turn >= turnLimit) {
+          endGame(1);
+          return;
+        }
+      });
+    });
+
+    /* Ending the game */
+    /* 0 is win, 1 is lose */ 
+    function endGame(result) {
+      gameActive = false;
+      if (result == 0) {
+        $("#announcements").text("Congratulations! You win!");
+      }
+      else {
+        $("#announcements").text("Better luck next time...!");
+      }
+      $("#announcements").append("<p>Click any square to play again!</p>");
+    };
+
+    /* Reset the game */
+    function resetGame()
+    {
+      /* Clear all tiles */
+      $("button").attr("class", "blank");
+
+      /* Reset text */
+      $("#announcements").text("Find the ships again!");
+
+      /* Replace ships */
+      placeShips();
+
+      /* Reset variables */
+      turn = 0;
+      gameActive = true;
+    }
+
+    function placeShips() {
+      /* Place Ships */
+      for (let i = 0; i < map.ships.length; i++) {
+        /* Calculate IDs to hit */
+        let startingColumn = map.ships[i].coords[0];
+        let startingRow = map.ships[i].coords[1];
+        let startingCellID = (startingRow * numColumns) + startingColumn;
+
+        if (map.ships[i].orientation == "horizontal"){
+        /* For horizontal ships */
+          for (let n = 0; n < map.ships[i].size; n++) {
+            let cell = startingCellID + n;
+            $("#" + cell).append("<div id = " + map.ships[i].name + "></div>");
+          }
+        }
+        else {
+          /* For vertical ships */
+          for (let n = 0; n < map.ships[i].size; n++) {
+            let cell = startingCellID + (n * numColumns);
+            $("#" + cell).append("<div id = " + map.ships[i].name + "></div>");
+          }
+        }
+        
+        /* Keep track of which ships have been sunk */
+        shipsToSink.push(map.ships[i].name);
+      }
+    }
+  </script>
+</html>
