@@ -13,3 +13,5 @@ I think it's fun to make small web games in JavaScript.
 Last year I put this quick game together so my friends could have fun trying to guess which "Top 9 Favorite Games" list belonged to who.
 
 <img width="778" alt="top9_games" src="https://github.com/user-attachments/assets/9511d595-2ef5-4a6a-838b-da9c4b22c67a" />
+
+[You can play it here if you want!](https://michael.kiang.net/top9)
